@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CollabCode – Совместная песочница</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23F59E0B' rx='20'/%3E%3Ctext x='50%25' y='55%25' text-anchor='middle' font-size='55'%3E⚡%3C/text%3E%3C/svg%3E">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" data-name="vs/editor/editor.main" href="https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs/editor/editor.main.min.css">
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+</head>
+<body>
+    <!-- Индикатор загрузки -->
+    <div id="loadingOverlay" class="loading-overlay">
+        <div class="spinner"></div>
+        <p class="loading-text">Загрузка редактора...</p>
+    </div>
+
+    <!-- ЛЕНДИНГ -->
+    <div id="landingScreen" class="landing-screen active">
+        <div class="landing-content">
+            <div class="landing-logo">⚡ CollabCode</div>
+            <h1 class="landing-title">Совместная песочница<br>для веб-разработки</h1>
+            <p class="landing-subtitle">
+                Пишите HTML, CSS и JavaScript вместе с друзьями в реальном времени.
+                Смотрите результат, общайтесь в чате и создавайте проекты быстрее.
+            </p>
+            <div class="landing-features">
+                <div class="feature"><i class="fas fa-code"></i> Monaco Editor (как VS Code)</div>
+                <div class="feature"><i class="fas fa-sync-alt"></i> Совместное редактирование</div>
+                <div class="feature"><i class="fas fa-comments"></i> Встроенный чат</div>
+                <div class="feature"><i class="fas fa-mobile-alt"></i> Превью и шаблоны</div>
+            </div>
+            <button id="startBtn" class="landing-btn">Начать</button>
+            <p class="landing-footer">
+                <a href="#" id="showAgreementBtn">Пользовательское соглашение</a>
+            </p>
+        </div>
+    </div>
+
+    <!-- Модальное окно соглашения -->
+    <div id="agreementModal" class="modal">
+        <div class="modal-content agreement-content">
+            <span class="close-modal" onclick="closeAgreement()">&times;</span>
+            <h2>Пользовательское соглашение</h2>
+            <div class="agreement-text">
+                <p>Добро пожаловать в CollabCode! Используя наш сервис, вы соглашаетесь с условиями настоящего соглашения.</p>
+                <p>1. Сервис предоставляется «как есть». Мы не несём ответственности за сохранность вашего кода.</p>
+                <p>2. Запрещено загружать вредоносный или незаконный контент.</p>
+                <p>3. Мы можем изменять условия в любое время, уведомляя пользователей.</p>
+                <p>4. Все данные хранятся в зашифрованном виде и не передаются третьим лицам.</p>
+                <p>Продолжая использовать CollabCode, вы принимаете эти условия.</p>
+            </div>
+            <button class="btn-primary" onclick="closeAgreement()">Принимаю</button>
+        </div>
+    </div>
+
+    <!-- АВТОРИЗАЦИЯ -->
+    <div id="authScreen" class="modal">
+        <div class="modal-content">
+            <div class="logo-icon large">⚡</div>
+            <h1>CollabCode</h1>
+            <p>Совместная песочница для кода</p>
+            <div class="auth-tabs">
+                <button id="loginTabBtn" class="auth-tab active">Вход</button>
+                <button id="registerTabBtn" class="auth-tab">Регистрация</button>
+            </div>
+            <form id="loginForm" class="auth-form">
+                <div class="input-group"><input type="email" id="loginEmail" placeholder="Email" required></div>
+                <div class="input-group"><input type="password" id="loginPassword" placeholder="Пароль" required></div>
+                <button type="submit" class="btn-primary">Войти</button>
+                <div id="loginError" class="error-message"></div>
+            </form>
+            <form id="registerForm" class="auth-form" style="display: none;">
+                <div class="input-group"><input type="text" id="registerName" placeholder="Имя" required></div>
+                <div class="input-group"><input type="email" id="registerEmail" placeholder="Email" required></div>
+                <div class="input-group"><input type="password" id="registerPassword" placeholder="Пароль" required></div>
+                <button type="submit" class="btn-primary">Зарегистрироваться</button>
+                <div id="registerError" class="error-message"></div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ВЫБОР КОМНАТЫ -->
+    <div id="roomScreen" class="modal">
+        <div class="modal-content">
+            <div class="logo-icon large">⚡</div>
+            <h1>CollabCode</h1>
+            <p>Привет, <span id="userNameDisplay"></span>!</p>
+            <div class="room-options">
+                <div class="template-selector">
+                    <label>Выберите шаблон:</label>
+                    <select id="templateSelect" class="template-select">
+                        <option value="default" selected>Стандартный</option>
+                        <option value="todo-list">Todo List</option>
+                        <option value="profile-card">Карточка профиля</option>
+                        <option value="animated-gradient">Анимированный градиент</option>
+                    </select>
+                </div>
+                <button id="createRoomBtn" class="btn-primary"><i class="fas fa-plus"></i> Создать комнату</button>
+                <div class="divider">или</div>
+                <!-- БЛОК С КНОПКОЙ НИЖЕ ПОЛЯ И ОТСТУПОМ -->
+                <div class="join-room-section" style="display: flex; flex-direction: column; gap: 12px; margin-top: 16px; width: 100%;">
+                    <div style="display: flex; gap: 10px; align-items: center; width: 100%;">
+                        <span style="color: #a1a1aa; font-size: 18px; font-weight: 500; flex-shrink: 0;">#</span>
+                        <input type="text" id="roomIdInput" placeholder="ID комнаты" style="flex: 1; min-width: 0; padding: 12px; font-size: 14px; background: #27272a; border: 1px solid #3f3f46; border-radius: 8px; color: white; outline: none;">
+                    </div>
+                    <button id="joinRoomBtn" style="width: 100%; padding: 12px; font-size: 14px; font-weight: 600; background: #27272a; color: white; border: 1px solid #3f3f46; border-radius: 8px; cursor: pointer; transition: 0.2s;">Присоединиться</button>
+                </div>
+            </div>
+            <div id="roomError" class="error-message"></div>
+            <button id="logoutBtn" class="btn-text" style="margin-top: 20px;">Выйти из аккаунта</button>
+        </div>
+    </div>
+
+    <!-- НАСТРОЙКИ -->
+    <div id="settingsPanel" class="settings-panel" style="display: none;">
+        <div class="settings-content">
+            <h3>Настройки</h3>
+            <div class="setting-item">
+                <label>Размер шрифта редактора</label>
+                <div class="font-size-control">
+                    <button class="btn-small secondary" onclick="decreaseFontSize()">−</button>
+                    <span id="fontSizeValue" class="font-size-display">14px</span>
+                    <button class="btn-small secondary" onclick="increaseFontSize()">+</button>
+                </div>
+            </div>
+            <div class="setting-item">
+                <label>Тема</label>
+                <button id="settingsThemeBtn" class="btn-small secondary" onclick="toggleTheme()">Переключить</button>
+            </div>
+            <button class="btn-text" onclick="toggleSettings()">Закрыть</button>
+        </div>
+    </div>
+
+    <!-- РЕДАКТОР -->
+    <div id="mainInterface" style="display: none; flex-direction: column; height: 100vh;">
+        <div id="topBar" class="top-bar">
+            <div class="top-left">
+                <span class="logo-small">⚡ CollabCode</span>
+                <span class="room-badge">#<span id="roomIdDisplay"></span></span>
+            </div>
+            <div class="top-right">
+                <button id="newRoomBtn" class="icon-btn" title="Новая комната"><i class="fas fa-plus-circle"></i></button>
+                <div id="usersList" class="users-avatars"></div>
+                <button id="downloadBtn" class="icon-btn" title="Скачать проект"><i class="fas fa-download"></i></button>
+                <button id="saveBtn" class="icon-btn" title="Сохранить в облаке"><i class="fas fa-save"></i></button>
+                <button id="shareBtn" class="icon-btn" title="Пригласить"><i class="fas fa-link"></i></button>
+                <button id="leaveBtn" class="icon-btn danger" title="Выйти"><i class="fas fa-sign-out-alt"></i></button>
+            </div>
+        </div>
+        <div class="workspace">
+            <div class="editors-panel">
+                <div class="editor-tabs">
+                    <button class="editor-tab active" data-language="html">HTML</button>
+                    <button class="editor-tab" data-language="css">CSS</button>
+                    <button class="editor-tab" data-language="js">JavaScript</button>
+                    <div class="spacer"></div>
+                    <button id="formatBtn" class="icon-btn small" title="Форматировать"><i class="fas fa-magic"></i></button>
+                    <button id="themeBtn" class="icon-btn small" title="Тема"><i class="fas fa-moon"></i></button>
+                    <button id="toggleSettingsBtn" class="icon-btn small" title="Настройки"><i class="fas fa-cog"></i></button>
+                    <span id="typingIndicator" class="typing-indicator"></span>
+                </div>
+                <div class="editor-container">
+                    <div id="htmlEditor" class="editor-wrapper active"></div>
+                    <div id="cssEditor" class="editor-wrapper"></div>
+                    <div id="jsEditor" class="editor-wrapper"></div>
+                </div>
+            </div>
+            <div id="resizer" class="resizer"></div>
+            <div class="side-panel" id="sidePanel">
+                <div class="preview-section">
+                    <div class="preview-header">
+                        <span><i class="fas fa-eye"></i> Превью</span>
+                        <div class="preview-actions">
+                            <button class="preview-btn" onclick="refreshPreview()"><i class="fas fa-sync-alt"></i></button>
+                            <button class="preview-btn" onclick="toggleOrientation()"><i class="fas fa-mobile-alt fa-rotate-90"></i></button>
+                            <button class="preview-btn" onclick="toggleDevice()"><i class="fas fa-mobile-alt"></i></button>
+                        </div>
+                    </div>
+                    <iframe id="previewFrame" class="preview-frame"></iframe>
+                    <div id="consoleOutput" class="console-output"></div>
+                </div>
+                <div class="chat-section">
+                    <div class="chat-header" id="chatToggle">
+                        <span><i class="fas fa-comments"></i> Чат</span>
+                        <i class="fas fa-chevron-down"></i>
+                    </div>
+                    <div class="chat-body">
+                        <div id="chatMessages" class="chat-messages"></div>
+                        <div class="chat-input-wrapper">
+                            <textarea id="chatInput" placeholder="Сообщение..."></textarea>
+                            <button id="sendChatBtn" class="icon-btn"><i class="fas fa-paper-plane"></i></button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="notificationContainer" class="notification-container"></div>
+    <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs/loader.js"></script>
+    <script src="app.js?v=10"></script>
+</body>
+</html>

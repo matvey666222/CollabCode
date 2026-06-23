@@ -1,0 +1,7 @@
+node_modules/
+.env
+*.log
+clear-users.js
+client/package.json
+client/package-lock.json
+client/libs/
